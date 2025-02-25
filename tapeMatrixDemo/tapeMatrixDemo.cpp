@@ -523,7 +523,7 @@ int main(int argc, char* argv[])
 
     double start_time_mpi = MPI_Wtime();
 
-    DecomposeMatrix decomp = lu_decomposition(matrix);
+    DecomposeMatrix decomp = lu_decomposition(matrix); 
     solve_lu(decomp, &matrix);
 
     double end_time_mpi = MPI_Wtime();
