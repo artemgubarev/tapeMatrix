@@ -281,7 +281,7 @@
 #include "../tapeMatrix/matrix.h"
 #include "../tapeMatrix/printer.h"
 
-double** allocate_matrix_mpi(std::uint32_t n)
+double** allocate_matrix_mpi(uint32_t n)
 {
     double** matrix = (double**)malloc(n * sizeof(double*));
     if (!matrix)
@@ -295,7 +295,7 @@ double** allocate_matrix_mpi(std::uint32_t n)
         perror("Error allocating matrix memory");
         exit(EXIT_FAILURE);
     }
-    for (std::size_t i = 1; i < n; i++)
+    for (size_t i = 1; i < n; i++)
     {
         matrix[i] = matrix[0] + i * n;
     }
@@ -326,8 +326,8 @@ Matrix read_matrix_mpi(const char* filename)
     mat.X = NULL;
 
     // Читаем матрицу
-    std::uint64_t total_matrix_elements = mat.n * mat.n;
-    for (std::uint64_t idx = 0; idx < total_matrix_elements; idx++)
+    uint64_t total_matrix_elements = mat.n * mat.n;
+    for (uint64_t idx = 0; idx < total_matrix_elements; idx++)
     {
         if (fscanf(file, "%lf", &mat.A[0][idx]) != 1)
         {
@@ -337,7 +337,7 @@ Matrix read_matrix_mpi(const char* filename)
     }
 
     // Читаем вектор C
-    for (std::size_t i = 0; i < mat.n; i++)
+    for (size_t i = 0; i < mat.n; i++)
     {
         if (fscanf(file, "%lf", &mat.C[i]) != 1)
         {
@@ -356,44 +356,44 @@ DecomposeMatrix lu_decomposition(Matrix matrix)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    std::uint32_t n = matrix.n;
-    std::uint32_t b = matrix.b;
+    uint32_t n = matrix.n;
+    uint32_t b = matrix.b;
 
     DecomposeMatrix result;
     result.l = (double**)malloc(n * sizeof(double*));
     result.u = (double**)malloc(n * sizeof(double*));
-    for (std::size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {
         result.l[i] = (double*)calloc(n, sizeof(double));
         result.u[i] = (double*)malloc(n * sizeof(double));
     }
 
-    for (std::size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {
-        for (std::size_t j = 0; j < n; j++)
+        for (size_t j = 0; j < n; j++)
         {
             result.u[i][j] = matrix.A[i][j];
         }
     }
 
-    for (std::size_t i = 0; i < n; i++)
+    for (size_t i = 0; i < n; i++)
     {
         result.l[i][i] = 1.0;
     }
 
-    std::uint32_t start_row = (n * rank) / size;
-    std::uint32_t end_row = (n * (rank + 1)) / size;
+    uint32_t start_row = (n * rank) / size;
+    uint32_t end_row = (n * (rank + 1)) / size;
 
-    for (std::size_t k = 0; k < n - 1; k++)
+    for (size_t k = 0; k < n - 1; k++)
     {
-        std::uint32_t upper_bound = (k + b + 1 < n) ? (k + b + 1) : n;
-        std::uint32_t owner = (k * size) / n;
-        std::uint32_t segment_length = upper_bound - k;
+        uint32_t upper_bound = (k + b + 1 < n) ? (k + b + 1) : n;
+        uint32_t owner = (k * size) / n;
+        uint32_t segment_length = upper_bound - k;
 
         if (segment_length > 0) {
             double* u_row_segment = (double*)malloc(segment_length * sizeof(double));
             if (rank == owner) {
-                for (std::size_t j = k; j < upper_bound; j++) {
+                for (size_t j = k; j < upper_bound; j++) {
                     u_row_segment[j - k] = result.u[k][j];
                 }
             }
@@ -412,10 +412,10 @@ void solve_lu(DecomposeMatrix decompose_matrix, Matrix* matrix)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    std::uint32_t n = matrix->n;
+    uint32_t n = matrix->n;
 
-    std::uint32_t start_row = (n * rank) / size;
-    std::uint32_t end_row = (n * (rank + 1)) / size;
+    uint32_t start_row = (n * rank) / size;
+    uint32_t end_row = (n * (rank + 1)) / size;
 
     double* y = (double*)malloc(n * sizeof(double));
     if (!y) {
@@ -423,19 +423,19 @@ void solve_lu(DecomposeMatrix decompose_matrix, Matrix* matrix)
         MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
     }
 
-    for (std::uint32_t i = 0; i < n; i++)
+    for (uint32_t i = 0; i < n; i++)
     {
         if (i >= start_row && i < end_row)
         {
             double s = 0.0;
-            for (std::uint32_t j = 0; j < i; j++)
+            for (uint32_t j = 0; j < i; j++)
             {
                 s += decompose_matrix.l[i][j] * y[j];
             }
             y[i] = matrix->C[i] - s;
         }
 
-        std::uint32_t owner = (i * size) / n;
+        uint32_t owner = (i * size) / n;
         MPI_Request req;
         MPI_Ibcast(&y[i], 1, MPI_DOUBLE, owner, MPI_COMM_WORLD, &req);
         MPI_Wait(&req, MPI_STATUS_IGNORE);
@@ -450,19 +450,19 @@ void solve_lu(DecomposeMatrix decompose_matrix, Matrix* matrix)
         }
     }
 
-    for (std::int32_t i = n - 1; i >= 0; i--)
+    for (int32_t i = n - 1; i >= 0; i--)
     {
-        if (i >= static_cast<std::int32_t>(start_row) && i < static_cast<std::int32_t>(end_row))
+        if (i >= static_cast<int32_t>(start_row) && i < static_cast<int32_t>(end_row))
         {
             double s = 0.0;
-            for (std::uint32_t j = i + 1; j < n; j++)
+            for (uint32_t j = i + 1; j < n; j++)
             {
                 s += decompose_matrix.u[i][j] * matrix->X[j];
             }
             matrix->X[i] = (y[i] - s) / decompose_matrix.u[i][i];
         }
 
-        std::uint32_t owner = (i * size) / n;
+        uint32_t owner = (i * size) / n;
         MPI_Request req;
         MPI_Ibcast(&matrix->X[i], 1, MPI_DOUBLE, owner, MPI_COMM_WORLD, &req);
         MPI_Wait(&req, MPI_STATUS_IGNORE);
@@ -489,7 +489,7 @@ int main(int argc, char* argv[])
 
     Matrix matrix;
     matrix.X = NULL;
-    std::uint32_t n = 0, b = 0;
+    uint32_t n = 0, b = 0;
 
     if (rank == 0)
     {
@@ -499,14 +499,14 @@ int main(int argc, char* argv[])
         b = matrix.b;
     }
 
-    std::int32_t n_int = static_cast<std::int32_t>(n);
-    std::int32_t b_int = static_cast<std::int32_t>(b);
+    int32_t n_int = static_cast<int32_t>(n);
+    int32_t b_int = static_cast<int32_t>(b);
 
     MPI_Bcast(&n_int, 1, MPI_INT, 0, comm);
     MPI_Bcast(&b_int, 1, MPI_INT, 0, comm);
 
-    n = static_cast<std::uint32_t>(n_int);
-    b = static_cast<std::uint32_t>(b_int);
+    n = static_cast<uint32_t>(n_int);
+    b = static_cast<uint32_t>(b_int);
 
     if (b == 0 || b > n) {
         fprintf(stderr, "Error: Invalid block size b = %u (n = %u)\n", b, n);
