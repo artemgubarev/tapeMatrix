@@ -1,2 +1,5 @@
 ﻿  tapeMatrixDemo.cpp
+C:\Users\artem\source\repos\tapeMatrix\tapeMatrixDemo\tapeMatrixDemo.cpp(389,70): warning C4267: 'initializing': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\artem\source\repos\tapeMatrix\tapeMatrixDemo\tapeMatrixDemo.cpp(390,45): warning C4267: 'initializing': conversion from 'size_t' to 'uint32_t', possible loss of data
+C:\Users\artem\source\repos\tapeMatrix\tapeMatrixDemo\tapeMatrixDemo.cpp(391,55): warning C4267: 'initializing': conversion from 'size_t' to 'uint32_t', possible loss of data
   tapeMatrixDemo.vcxproj -> C:\Users\artem\source\repos\tapeMatrix\x64\Debug\tapeMatrixDemo.exe
