@@ -323,7 +323,7 @@ Matrix read_matrix_mpi(const char* filename)
         perror("Error allocating vector C");
         exit(EXIT_FAILURE);
     }
-    mat.X = nullptr;
+    mat.X = NULL;
 
     // Читаем матрицу
     std::uint64_t total_matrix_elements = mat.n * mat.n;
@@ -441,7 +441,7 @@ void solve_lu(DecomposeMatrix decompose_matrix, Matrix* matrix)
         MPI_Wait(&req, MPI_STATUS_IGNORE);
     }
 
-    if (matrix->X == nullptr)
+    if (matrix->X == NULL)
     {
         matrix->X = (double*)malloc(n * sizeof(double));
         if (!matrix->X) {
@@ -473,6 +473,13 @@ void solve_lu(DecomposeMatrix decompose_matrix, Matrix* matrix)
 
 int main(int argc, char* argv[])
 {
+    const char* filename = getenv("INPUT_MATRIX_FILE");
+    if (!filename)
+    {
+        fprintf(stderr, "Error: environment variable INPUT_MATRIX_FILE not set.\n");
+        return 1;
+    }
+
     MPI_Init(&argc, &argv);
 
     int rank, size;
@@ -481,12 +488,13 @@ int main(int argc, char* argv[])
     MPI_Comm_size(comm, &size);
 
     Matrix matrix;
-    matrix.X = nullptr;
+    matrix.X = NULL;
     std::uint32_t n = 0, b = 0;
 
     if (rank == 0)
     {
-        matrix = read_matrix_mpi("testData/matrix100.txt");
+        //matrix = read_matrix_mpi("testData/matrix100.txt");
+        matrix = read_matrix_mpi(filename);
         n = matrix.n;
         b = matrix.b;
     }
@@ -515,7 +523,7 @@ int main(int argc, char* argv[])
             perror("Ошибка выделения вектора C на не-root процессе");
             MPI_Abort(comm, EXIT_FAILURE);
         }
-        matrix.X = nullptr;
+        matrix.X = NULL;
     }
 
     MPI_Bcast(matrix.A[0], n * n, MPI_DOUBLE, 0, comm);
