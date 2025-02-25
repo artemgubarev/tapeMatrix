@@ -8,8 +8,8 @@ struct DecomposeMatrix
 
 struct Matrix
 {
-    long n;
-    long b;
+    std::uint32_t n;
+    std::uint32_t b;
     double* C;
     double** A;
     double* X;
