@@ -129,6 +129,10 @@
   <ItemGroup>
     <ClInclude Include="matrix.h" />
     <ClInclude Include="printer.h" />
+    <ClInclude Include="solver_mpi_omp.h" />
+    <ClInclude Include="solver_omp.h" />
+    <ClInclude Include="solver_serial.h" />
+    <ClInclude Include="writer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

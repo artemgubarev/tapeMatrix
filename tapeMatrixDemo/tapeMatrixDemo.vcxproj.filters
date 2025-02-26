@@ -22,5 +22,15 @@
   <ItemGroup>
     <None Include="run.slurm" />
     <None Include="test.slurm" />
+    <None Include="gen.py" />
+    <None Include="gen.slurm" />
+    <None Include="rm.sh" />
+    <None Include="msolve.m" />
+    <None Include="mlab.slurm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="comparator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

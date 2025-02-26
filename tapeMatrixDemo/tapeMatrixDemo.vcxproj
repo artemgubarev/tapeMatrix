@@ -136,8 +136,16 @@
     <ClCompile Include="tapeMatrixDemo.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="gen.py" />
+    <None Include="gen.slurm" />
+    <None Include="mlab.slurm" />
+    <None Include="msolve.m" />
+    <None Include="rm.sh" />
     <None Include="run.slurm" />
     <None Include="test.slurm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="comparator.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

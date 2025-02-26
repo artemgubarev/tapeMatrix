@@ -11,6 +11,8 @@
 #include "../tapeMatrix/matrix.h"
 #include "../tapeMatrix/printer.h"
 #include "../tapeMatrix/writer.h"
+#include "../tapeMatrix/solver_serial.h"
+#include "../tapeMatrix/solver_omp.h"
 
 double** allocate_matrix_mpi(uint32_t n)
 {
@@ -81,126 +83,17 @@ Matrix read_matrix_mpi(const char* filename)
 	return mat;
 }
 
-DecomposeMatrix lu_decomposition(Matrix matrix)
+void reverse_array(double* array, size_t n)
 {
-	int rank, size;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-	uint32_t n = matrix.n;
-	uint32_t b = matrix.b;
-
-	DecomposeMatrix result;
-	result.l = (double**)malloc(n * sizeof(double*));
-	result.u = (double**)malloc(n * sizeof(double*));
-	for (size_t i = 0; i < n; i++)
+	double temp;
+	for (size_t i = 0; i < n / 2; ++i)
 	{
-		result.l[i] = (double*)calloc(n, sizeof(double));
-		result.u[i] = (double*)malloc(n * sizeof(double));
+		temp = array[i];
+		array[i] = array[n - 1 - i];
+		array[n - 1 - i] = temp;
 	}
-
-	for (size_t i = 0; i < n; i++)
-	{
-		for (size_t j = 0; j < n; j++)
-		{
-			result.u[i][j] = matrix.A[i][j];
-		}
-	}
-
-	for (size_t i = 0; i < n; i++)
-	{
-		result.l[i][i] = 1.0;
-	}
-
-	uint32_t start_row = (n * rank) / size;
-	uint32_t end_row = (n * (rank + 1)) / size;
-
-	for (size_t k = 0; k < n - 1; k++)
-	{
-		uint32_t upper_bound = (k + b + 1 < n) ? (k + b + 1) : n;
-		uint32_t owner = (k * size) / n;
-		uint32_t segment_length = upper_bound - k;
-
-		if (segment_length > 0) {
-			double* u_row_segment = (double*)malloc(segment_length * sizeof(double));
-			if (rank == owner) {
-				for (size_t j = k; j < upper_bound; j++) {
-					u_row_segment[j - k] = result.u[k][j];
-				}
-			}
-			MPI_Request req;
-			MPI_Ibcast(u_row_segment, segment_length, MPI_DOUBLE, owner, MPI_COMM_WORLD, &req);
-			MPI_Wait(&req, MPI_STATUS_IGNORE);
-			free(u_row_segment);
-		}
-	}
-	return result;
 }
 
-void solve_lu(DecomposeMatrix decompose_matrix, Matrix* matrix)
-{
-	int rank, size;
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-	uint32_t n = matrix->n;
-
-	uint32_t start_row = (n * rank) / size;
-	uint32_t end_row = (n * (rank + 1)) / size;
-
-	double* y = (double*)malloc(n * sizeof(double));
-	if (!y) {
-		perror("Error allocating vector y");
-		MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-	}
-
-	for (uint32_t i = 0; i < n; i++)
-	{
-		if (i >= start_row && i < end_row)
-		{
-			double s = 0.0;
-			for (uint32_t j = 0; j < i; j++)
-			{
-				s += decompose_matrix.l[i][j] * y[j];
-			}
-			y[i] = matrix->C[i] - s;
-		}
-
-		uint32_t owner = (i * size) / n;
-		MPI_Request req;
-		MPI_Ibcast(&y[i], 1, MPI_DOUBLE, owner, MPI_COMM_WORLD, &req);
-		MPI_Wait(&req, MPI_STATUS_IGNORE);
-	}
-
-	if (matrix->X == NULL)
-	{
-		matrix->X = (double*)malloc(n * sizeof(double));
-		if (!matrix->X) {
-			perror("Error allocating vector X");
-			MPI_Abort(MPI_COMM_WORLD, EXIT_FAILURE);
-		}
-	}
-
-	for (int32_t i = n - 1; i >= 0; i--)
-	{
-		if (i >= static_cast<int32_t>(start_row) && i < static_cast<int32_t>(end_row))
-		{
-			double s = 0.0;
-			for (uint32_t j = i + 1; j < n; j++)
-			{
-				s += decompose_matrix.u[i][j] * matrix->X[j];
-			}
-			matrix->X[i] = (y[i] - s) / decompose_matrix.u[i][i];
-		}
-
-		uint32_t owner = (i * size) / n;
-		MPI_Request req;
-		MPI_Ibcast(&matrix->X[i], 1, MPI_DOUBLE, owner, MPI_COMM_WORLD, &req);
-		MPI_Wait(&req, MPI_STATUS_IGNORE);
-	}
-
-	free(y);
-}
 
 void get_output_filename(const char* input_file, char* output_filename, long size)
 {
@@ -239,93 +132,113 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	MPI_Init(&argc, &argv);
-
-	int rank, size;
-	MPI_Comm comm = MPI_COMM_WORLD;
-	MPI_Comm_rank(comm, &rank);
-	MPI_Comm_size(comm, &size);
-
 	Matrix matrix;
-	matrix.X = NULL;
-	uint32_t n = 0, b = 0;
+	matrix = read_matrix_mpi(filename);
+	//matrix = read_matrix_mpi("testData/matrix2000.txt");
 
-	if (rank == 0)
-	{
-		//matrix = read_matrix_mpi("testData/matrix100.txt");
-		matrix = read_matrix_mpi(filename);
-		n = matrix.n;
-		b = matrix.b;
-	}
+	clock_t start, end;
+	double cpu_time_used;
+	start = clock();
 
-	int32_t n_int = static_cast<int32_t>(n);
-	int32_t b_int = static_cast<int32_t>(b);
+	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
+	band_matrix_omp::solve_lu(decomp, &matrix);
 
-	MPI_Bcast(&n_int, 1, MPI_INT, 0, comm);
-	MPI_Bcast(&b_int, 1, MPI_INT, 0, comm);
+	end = clock();
+	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	printf("time: %f sec\n", cpu_time_used);
 
-	n = static_cast<uint32_t>(n_int);
-	b = static_cast<uint32_t>(b_int);
-
-	if (b == 0 || b > n) {
-		fprintf(stderr, "Error: Invalid block size b = %u (n = %u)\n", b, n);
-		MPI_Abort(comm, EXIT_FAILURE);
-	}
-
-	if (rank != 0) {
-		matrix.n = n;
-		matrix.b = b;
-		matrix.A = allocate_matrix_mpi(n);
-		matrix.C = (double*)malloc(n * sizeof(double));
-		if (!matrix.C)
-		{
-			perror("Ошибка выделения вектора C на не-root процессе");
-			MPI_Abort(comm, EXIT_FAILURE);
+		//MPI_Init(&argc, &argv);
+	
+		//int rank, size;
+		//MPI_Comm comm = MPI_COMM_WORLD;
+		//MPI_Comm_rank(comm, &rank);
+		//MPI_Comm_size(comm, &size);
+	
+		//Matrix matrix;
+		//matrix.X = NULL;
+		//uint32_t n = 0, b = 0;
+	
+		//if (rank == 0)
+		//{
+		//	matrix = read_matrix_mpi("testData/matrix5.txt");
+		//	//matrix = read_matrix_mpi(filename);
+		//	n = matrix.n;
+		//	b = matrix.b;
+		//}
+	
+		////print_1d(matrix.C, matrix.n);
+	
+		//int32_t n_int = static_cast<int32_t>(n);
+		//int32_t b_int = static_cast<int32_t>(b);
+	
+		//MPI_Bcast(&n_int, 1, MPI_INT, 0, comm);
+		//MPI_Bcast(&b_int, 1, MPI_INT, 0, comm);
+	
+		//n = static_cast<uint32_t>(n_int);
+		//b = static_cast<uint32_t>(b_int);
+	
+		//if (b == 0 || b > n) 
+		//{
+		//	fprintf(stderr, "Error: Invalid block size b = %u (n = %u)\n", b, n);
+		//	MPI_Abort(comm, EXIT_FAILURE);
+		//}
+	
+		//if (rank != 0) {
+		//	matrix.n = n;
+		//	matrix.b = b;
+		//	matrix.A = allocate_matrix_mpi(n);
+		//	matrix.C = (double*)malloc(n * sizeof(double));
+		//	if (!matrix.C)
+		//	{
+		//		perror("Ошибка выделения вектора C на не-root процессе");
+		//		MPI_Abort(comm, EXIT_FAILURE);
+		//	}
+		//	matrix.X = NULL;
+		//}
+	
+		//MPI_Bcast(matrix.A[0], n * n, MPI_DOUBLE, 0, comm);
+		//MPI_Bcast(matrix.C, n, MPI_DOUBLE, 0, comm);
+	
+		//double start_time_mpi = MPI_Wtime();
+	
+		///*DecomposeMatrix decomp = band_matrix_serial::lu_decomposition(matrix);
+		//band_matrix_serial::solve_lu(decomp, &matrix);*/
+	
+		//double end_time_mpi = MPI_Wtime();
+		//if (rank == 0)
+		//{
+		//	printf("Time: %f sec.\n", end_time_mpi - start_time_mpi);
+		//	//write_1d("solution.txt", matrix.X, matrix.n);
+		//	//print_1d(matrix.X, matrix.n);
+		//}
+	
+	#pragma region compare
+		/*double epsilon = 0.00001;
+		double* numbers1 = new double[MAX_NUMBERS];
+		double* numbers2 = new double[MAX_NUMBERS];
+		size_t count1, count2;
+		char output_filename[512];
+		get_output_filename(filename, output_filename, sizeof(output_filename));
+		if (!load_numbers("solution.txt", numbers1, &count1) ||
+			!load_numbers(output_filename, numbers2, &count2)) {
+			return 1;
 		}
-		matrix.X = NULL;
-	}
+		if (compare_numbers(numbers1, numbers2, count1, count2, epsilon)) {
+			printf("\033[32mTest Correct\033[0m\n");
+		}
+		else {
+			printf("\033[31mTest Failed\033[0m\n");
+		}
+		delete[] numbers1;
+		delete[] numbers2;*/
+	#pragma endregion
+	
+		/*free(matrix.A[0]);
+		free(matrix.A);
+		free(matrix.C);
+		free(matrix.X);
+	
+		MPI_Finalize();*/
+		return 0;
 
-	MPI_Bcast(matrix.A[0], n * n, MPI_DOUBLE, 0, comm);
-	MPI_Bcast(matrix.C, n, MPI_DOUBLE, 0, comm);
-
-	double start_time_mpi = MPI_Wtime();
-
-	DecomposeMatrix decomp = lu_decomposition(matrix);
-	solve_lu(decomp, &matrix);
-
-	double end_time_mpi = MPI_Wtime();
-	if (rank == 0)
-	{
-		printf("Time: %f sec.\n", end_time_mpi - start_time_mpi);
-		write_1d("solution.txt", matrix.X, matrix.n);
-	}
-
-#pragma region compare
-	double epsilon = 0.00001;
-	double* numbers1 = new double[MAX_NUMBERS];
-	double* numbers2 = new double[MAX_NUMBERS];
-	size_t count1, count2;
-	char output_filename[512];
-	get_output_filename(filename, output_filename, sizeof(output_filename));
-	if (!load_numbers("solution.txt", numbers1, &count1) ||
-		!load_numbers(output_filename, numbers2, &count2)) {
-		return 1;
-	}
-	if (compare_numbers(numbers1, numbers2, count1, count2, epsilon)) {
-		printf("\033[32mTest Correct\033[0m\n");
-	}
-	else {
-		printf("\033[31mTest Failed\033[0m\n");
-	}
-	delete[] numbers1;
-	delete[] numbers2;
-#pragma endregion
-
-	free(matrix.A[0]);
-	free(matrix.A);
-	free(matrix.C);
-	free(matrix.X);
-
-	MPI_Finalize();
-	return 0;
 }
