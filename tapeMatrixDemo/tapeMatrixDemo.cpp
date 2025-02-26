@@ -167,14 +167,11 @@ int main(int argc, char* argv[])
 	matrix = read_matrix_mpi(filename);
 	//matrix = read_matrix_mpi("testData/matrix2000.txt");
 
-	clock_t start, end;
-	double cpu_time_used;
-	start = clock();
+	double start = omp_get_wtime();
 	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
 	band_matrix_omp::solve_lu(decomp, &matrix);
-	end = clock();
-	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
-	printf("time: %f sec\n", cpu_time_used);
+	double end = omp_get_wtime();
+	printf("Elapsed time: %f seconds\n", end - start);
 
 	//print_1d(matrix.X, matrix.n);
 
