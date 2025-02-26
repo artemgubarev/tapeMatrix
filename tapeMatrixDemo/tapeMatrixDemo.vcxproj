@@ -105,6 +105,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\artem\source\repos\Repo\3rdparty\IntelSWTools\2017.2.187\windows\mkl\include;C:\Program Files %28x86%29\Microsoft SDKs\MPI\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -122,6 +123,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\artem\source\repos\Repo\3rdparty\IntelSWTools\2017.2.187\windows\mkl\include;C:\Program Files %28x86%29\Microsoft SDKs\MPI\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <OpenMPSupport>true</OpenMPSupport>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -146,7 +148,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="comparator.h" />
-    <ClInclude Include="MatLib.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

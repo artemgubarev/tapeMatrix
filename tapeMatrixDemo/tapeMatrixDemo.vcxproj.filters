@@ -32,8 +32,5 @@
     <ClInclude Include="comparator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MatLib.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
