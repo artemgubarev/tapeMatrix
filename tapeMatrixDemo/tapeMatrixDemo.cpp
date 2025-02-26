@@ -156,16 +156,16 @@ void random_fill(double** matrix, int32_t size)
 
 int main(int argc, char* argv[])
 {
-	/*const char* filename = getenv("INPUT_MATRIX_FILE");
+	const char* filename = getenv("INPUT_MATRIX_FILE");
 	if (!filename)
 	{
 		fprintf(stderr, "Error: environment variable INPUT_MATRIX_FILE not set.\n");
 		return 1;
-	}*/
+	}
 
 	Matrix matrix;
-	//matrix = read_matrix_mpi(filename);
-	matrix = read_matrix_mpi("testData/matrix2000.txt");
+	matrix = read_matrix_mpi(filename);
+	//matrix = read_matrix_mpi("testData/matrix2000.txt");
 
 	clock_t start, end;
 	double cpu_time_used;
