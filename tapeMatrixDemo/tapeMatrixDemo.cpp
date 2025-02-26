@@ -170,8 +170,6 @@ int main(int argc, char* argv[])
 	clock_t start, end;
 	double cpu_time_used;
 	
-	omp_set_num_threads(1);
-	
 	start = clock();
 	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
 	band_matrix_omp::solve_lu(decomp, &matrix);
