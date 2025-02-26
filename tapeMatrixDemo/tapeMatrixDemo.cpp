@@ -156,26 +156,25 @@ void random_fill(double** matrix, int32_t size)
 
 int main(int argc, char* argv[])
 {
-	/*const char* filename = getenv("INPUT_MATRIX_FILE");
+	const char* filename = getenv("INPUT_MATRIX_FILE");
 	if (!filename)
 	{
 		fprintf(stderr, "Error: environment variable INPUT_MATRIX_FILE not set.\n");
 		return 1;
-	}*/
+	}
 
 	Matrix matrix;
-	//matrix = read_matrix_mpi(filename);
-	matrix = read_matrix_mpi("testData/matrix2000.txt");
-	
-	omp_set_num_threads(1);
+	matrix = read_matrix_mpi(filename);
+	//matrix = read_matrix_mpi("testData/matrix2000.txt");
 
-	double start = omp_get_wtime();
-
+	clock_t start, end;
+	double cpu_time_used;
+	start = clock();
 	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
 	band_matrix_omp::solve_lu(decomp, &matrix);
-
-	double end = omp_get_wtime();
-	printf("Wall time: %f\n", end - start);
+	end = clock();
+	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+	printf("time: %f sec\n", cpu_time_used);
 
 	//print_1d(matrix.X, matrix.n);
 
