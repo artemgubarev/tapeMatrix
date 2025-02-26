@@ -1,4 +1,8 @@
-FILES=("err.log" "out.log" "tapeMatrix" "gen_err.log" "gen_out.log" "solution.txt" "msolution.txt")
+FILES=("err.log" "out.log" 
+        "tapeMatrix" 
+        "gen_err.log" "gen_out.log" 
+        "solution.txt" "msolution.txt"
+        "mout.log" "merr.log")
 
 for file in "${FILES[@]}"; do
     if [ -f "$file" ]; then
