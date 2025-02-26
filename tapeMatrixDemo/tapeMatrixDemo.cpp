@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <cstdlib>
 #include <cstdint>
@@ -123,29 +124,64 @@ void get_output_filename(const char* input_file, char* output_filename, long siz
 	snprintf(output_filename, size, "mSolutions/msolution%s.txt", name_only);
 }
 
+void random_fill(double** matrix, int32_t size)
+{
+	for (int i = 0; i < size; i++)
+	{
+		for (int j = 0; j < size; j++)
+		{
+			matrix[i][j] = ((rand() % 10) + 1);
+		}
+	}
+
+	//Ensure the matrix is diagonal dominant to guarantee invertible-ness
+	//diagCount well help keep track of which column the diagonal is in
+	int diagCount = 0;
+	double sum = 0;
+	for (int i = 0; i < size; i++)
+	{
+		for (int j = 0; j < size; j++)
+		{
+			//Sum all column vaalues
+			sum += abs(matrix[i][j]);
+		}
+		//Remove the diagonal  value from the sum
+		sum -= abs(matrix[i][diagCount]);
+		//Add a random value to the sum and place in diagonal position
+		matrix[i][diagCount] = sum + ((rand() % 5) + 1);
+		++diagCount;
+		sum = 0;
+	}
+}
+
 int main(int argc, char* argv[])
 {
-	const char* filename = getenv("INPUT_MATRIX_FILE");
+	/*const char* filename = getenv("INPUT_MATRIX_FILE");
 	if (!filename)
 	{
 		fprintf(stderr, "Error: environment variable INPUT_MATRIX_FILE not set.\n");
 		return 1;
-	}
+	}*/
 
 	Matrix matrix;
-	matrix = read_matrix_mpi(filename);
-	//matrix = read_matrix_mpi("testData/matrix2000.txt");
+	//matrix = read_matrix_mpi(filename);
+	matrix = read_matrix_mpi("testData/matrix2000.txt");
 
 	clock_t start, end;
 	double cpu_time_used;
+	
+	omp_set_num_threads(1);
+	
 	start = clock();
-
 	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
 	band_matrix_omp::solve_lu(decomp, &matrix);
-
 	end = clock();
 	cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
 	printf("time: %f sec\n", cpu_time_used);
+
+
+
+	//print_1d(matrix.X, matrix.n);
 
 		//MPI_Init(&argc, &argv);
 	

@@ -9,83 +9,179 @@
 
 namespace band_matrix_omp
 {
-    DecomposeMatrix lu_decomposition(const Matrix matrix)
+    void reverse_array(double* array, int32_t n)
     {
-        int n = matrix.n;
-        int b = matrix.b;
+        double temp;
+#pragma omp parallel for private(temp) schedule(static)
+        for (int32_t i = 0; i < n / 2; ++i)
+        {
+            temp = array[i];
+            array[i] = array[n - 1 - i];
+            array[n - 1 - i] = temp;
+        }
+    }
 
-        // Выделение памяти для L и U.
-        DecomposeMatrix result;
+    struct DecomposeMatrix lu_decomposition(struct Matrix matrix)
+    {
+        struct DecomposeMatrix result;
+        int32_t n = matrix.n;
+        int32_t b = matrix.b;
+
         result.l = (double**)malloc(n * sizeof(double*));
         result.u = (double**)malloc(n * sizeof(double*));
-        for (int i = 0; i < n; i++) {
+
+        // Параллельное выделение памяти
+#pragma omp parallel for schedule(static)
+        for (int32_t i = 0; i < n; i++)
+        {
             result.l[i] = (double*)calloc(n, sizeof(double));
             result.u[i] = (double*)malloc(n * sizeof(double));
         }
 
-        // Параллельная инициализация матриц L и U.
-#pragma omp parallel for schedule(static)
-        for (int i = 0; i < n; i++)
+        // Копирование матрицы в U
+#pragma omp parallel for collapse(2) schedule(static)
+        for (int32_t i = 0; i < n; i++)
         {
-            for (int j = 0; j < n; j++)
+            for (int32_t j = 0; j < n; j++)
             {
                 result.u[i][j] = matrix.A[i][j];
             }
+        }
+
+        // Инициализация диагонали L
+#pragma omp parallel for schedule(static)
+        for (int32_t i = 0; i < n; i++) {
             result.l[i][i] = 1.0;
         }
 
-        // Главный цикл LU-разложения.
-        for (int k = 0; k < n - 1; k++) {
-            double pivotVal = result.u[k][k];
-
-            // Обновление строк от k+1 до k+b (учитывая границу n).
-#pragma omp parallel for schedule(static)
-            for (int i = k + 1; i < MIN(k + b + 1, n); i++)
+        // Основной цикл разложения
+        for (int32_t k = 0; k < n - 1; ++k)
+        {
+            int32_t upper_bound = (k + b + 1 < n) ? (k + b + 1) : n;
+            // Параллелизация внутреннего цикла
+#pragma omp parallel for schedule(dynamic)
+            for (int32_t i = k + 1; i < upper_bound; ++i)
             {
-                result.l[i][k] = result.u[i][k] / pivotVal;
-                for (int j = k; j < MIN(k + b + 1, n); j++)
+                result.l[i][k] = result.u[i][k] / result.u[k][k];
+                for (int32_t j = k; j < upper_bound; ++j)
                 {
                     result.u[i][j] -= result.l[i][k] * result.u[k][j];
                 }
             }
         }
-
         return result;
     }
 
-    // Функция решения системы методом LU-разложения.
-    void solve_lu(const DecomposeMatrix decomp, Matrix* matrix)
+  /*  struct DecomposeMatrix lu_decomposition(struct Matrix matrix)
     {
-        int n = matrix->n;
+        struct DecomposeMatrix result;
+
+        int32_t n = matrix.n;
+        int32_t b = matrix.b;
+
+        result.l = (double**)malloc(n * sizeof(double*));
+        result.u = (double**)malloc(n * sizeof(double*));
+
+        #pragma omp parallel for
+        for (int32_t i = 0; i < n; i++)
+        {
+            result.l[i] = (double*)calloc(n, sizeof(double));
+            result.u[i] = (double*)malloc(n * sizeof(double));
+        }
+
+        #pragma omp parallel for collapse(2)
+        for (int32_t i = 0; i < n; i++)
+        {
+            for (int32_t j = 0; j < n; j++)
+            {
+                result.u[i][j] = matrix.A[i][j];
+            }
+        }
+
+        #pragma omp parallel for
+        for (int32_t i = 0; i < n; i++) {
+            result.l[i][i] = 1.0;
+        }
+
+        for (int32_t k = 0; k < n - 1; ++k)
+        {
+            int32_t upper_bound = (k + b + 1 < n) ? (k + b + 1) : n;
+            #pragma omp parallel for shared(result, upper_bound, k)
+            for (int32_t i = k + 1; i < upper_bound; ++i)
+            {
+                result.l[i][k] = result.u[i][k] / result.u[k][k];
+                for (int32_t j = k; j < upper_bound; ++j)
+                {
+                    result.u[i][j] -= result.l[i][k] * result.u[k][j];
+                }
+            }
+        }
+        return result;
+    }*/
+
+    void solve_lu(DecomposeMatrix decomp, struct Matrix* matrix)
+    {
+        int32_t n = matrix->n;
         double* y = (double*)malloc(n * sizeof(double));
 
-        // Прямой ход: решение системы L*y = C.
-        // Данный цикл вынужден быть последовательным, т.к. y[i] зависит от y[0..i-1].
-        for (int i = 0; i < n; i++)
+        // Решение Ly = b
+        for (int32_t i = 0; i < n; i++)
         {
             double s = 0.0;
-            // Внутренний цикл суммирования можно распараллелить, если число элементов достаточно велико.
 #pragma omp parallel for reduction(+:s) schedule(static)
-            for (int j = 0; j < i; j++)
+            for (int32_t j = 0; j < i; j++)
             {
                 s += decomp.l[i][j] * y[j];
             }
             y[i] = matrix->C[i] - s;
         }
 
-        // Обратный ход: решение системы U*x = y.
         matrix->X = (double*)malloc(n * sizeof(double));
-        for (int i = (int)n - 1; i >= 0; i--)
+        // Решение Ux = y
+        for (int32_t i = n - 1, k = 0; i >= 0; --i, k++)
         {
             double s = 0.0;
 #pragma omp parallel for reduction(+:s) schedule(static)
-            for (int j = i + 1; j < (int)n; j++)
+            for (int32_t j = n - 1; j > i; --j)
             {
-                s += decomp.u[i][j] * matrix->X[j];
+                s += decomp.u[i][j] * matrix->X[n - j - 1];
             }
-            matrix->X[i] = (y[i] - s) / decomp.u[i][i];
+            matrix->X[k] = (y[i] - s) / decomp.u[i][i];
         }
 
+        reverse_array(matrix->X, n);
         free(y);
     }
+
+   /* void solve_lu(DecomposeMatrix decomp, struct Matrix* matrix)
+    {
+        int32_t n = matrix->n;
+        double* y = (double*)malloc(n * sizeof(double));
+
+        for (int32_t i = 0; i < n; i++)
+        {
+            double s = 0.0;
+            #pragma omp parallel for reduction(+:s)
+            for (int32_t j = 0; j < i; j++)
+            {
+                s += decomp.l[i][j] * y[j];
+            }
+            y[i] = matrix->C[i] - s;
+        }
+
+        matrix->X = (double*)malloc(n * sizeof(double));
+        for (int32_t i = n - 1, k = 0; i >= 0; --i, k++)
+        {
+            double s = 0.0;
+            #pragma omp parallel for reduction(+:s)
+            for (int32_t j = n - 1; j > i; --j)
+            {
+                s += decomp.u[i][j] * matrix->X[n - j - 1];
+            }
+            matrix->X[k] = (y[i] - s) / decomp.u[i][i];
+        }
+
+        reverse_array(matrix->X, n);
+        free(y);
+    }*/
 }
