@@ -220,6 +220,7 @@ int main(int argc, char* argv[])
 	if (rank == 0) 
 	{
 		printf("Elapsed time (MPI_Wtime): %f sec\n", t2 - t1);
+		write_1d("solution.txt", matrix.X, matrix.n);
 		//print_1d(matrix.X, matrix.n);
 	}
 
@@ -296,7 +297,7 @@ int main(int argc, char* argv[])
 		//}
 	
 	#pragma region compare
-		/*double epsilon = 0.00001;
+		double epsilon = 0.00001;
 		double* numbers1 = new double[MAX_NUMBERS];
 		double* numbers2 = new double[MAX_NUMBERS];
 		size_t count1, count2;
@@ -313,7 +314,7 @@ int main(int argc, char* argv[])
 			printf("\033[31mTest Failed\033[0m\n");
 		}
 		delete[] numbers1;
-		delete[] numbers2;*/
+		delete[] numbers2;
 	#pragma endregion
 	
 		/*free(matrix.A[0]);
