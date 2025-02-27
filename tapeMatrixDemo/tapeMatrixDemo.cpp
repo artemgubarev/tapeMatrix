@@ -171,12 +171,12 @@ void get_output_filename(const char* input_file, char* output_filename, long siz
 
 int main(int argc, char* argv[])
 {
-	/*const char* filename = getenv("INPUT_MATRIX_FILE");
+	const char* filename = getenv("INPUT_MATRIX_FILE");
 	if (!filename)
 	{
 		fprintf(stderr, "Error: environment variable INPUT_MATRIX_FILE not set.\n");
 		return 1;
-	}*/
+	}
 
 	MPI_Init(&argc, &argv);
 	int32_t rank, size;
@@ -192,8 +192,8 @@ int main(int argc, char* argv[])
 	Matrix matrix;
 	if (rank == 0) 
 	{
-		//matrix = read_matrix_mpi(filename);
-		matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
+		matrix = read_matrix_mpi(filename,rank);
+		//matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
 	}
 
 	MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
