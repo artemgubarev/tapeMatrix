@@ -14,6 +14,8 @@
 #include "../tapeMatrix/writer.h"
 #include "../tapeMatrix/solver_serial.h"
 #include "../tapeMatrix/solver_omp.h"
+#include "../tapeMatrix/solver_mpi_omp.h"
+#include "../tapeMatrix/solver_mpi.h"
 
 double** allocate_matrix_mpi(uint32_t n)
 {
@@ -36,7 +38,7 @@ double** allocate_matrix_mpi(uint32_t n)
 	return matrix;
 }
 
-Matrix read_matrix_mpi(const char* filename)
+Matrix read_matrix(const char* filename)
 {
 	Matrix mat;
 	FILE* file = fopen(filename, "r");
@@ -84,17 +86,60 @@ Matrix read_matrix_mpi(const char* filename)
 	return mat;
 }
 
-void reverse_array(double* array, size_t n)
+Matrix read_matrix_mpi(const char* filename, int rank)
 {
-	double temp;
-	for (size_t i = 0; i < n / 2; ++i)
+	Matrix mat;
+	FILE* file = fopen(filename, "r");
+	if (!file) 
 	{
-		temp = array[i];
-		array[i] = array[n - 1 - i];
-		array[n - 1 - i] = temp;
+		if (rank == 0) 
+		{
+			perror("Error opening file");
+		}
+		MPI_Abort(MPI_COMM_WORLD, 1);
 	}
+
+	fscanf(file, "%d %d", &mat.n, &mat.b);
+
+	mat.A = (double**)malloc(mat.n * sizeof(double*));
+	mat.A[0] = (double*)malloc(mat.n * mat.n * sizeof(double));
+	for (int i = 1; i < mat.n; i++) {
+		mat.A[i] = mat.A[0] + i * mat.n;
+	}
+
+	mat.C = (double*)malloc(mat.n * sizeof(double));
+	mat.X = NULL;
+
+	for (int i = 0; i < mat.n; i++) {
+		for (int j = 0; j < mat.n; j++) {
+			fscanf(file, "%lf", &mat.A[i][j]);
+		}
+	}
+	for (int i = 0; i < mat.n; i++) {
+		fscanf(file, "%lf", &mat.C[i]);
+	}
+	fclose(file);
+
+	return mat;
 }
 
+void distribute_matrix(Matrix& mat, int rank, int size)
+{
+	if (rank != 0) 
+	{
+		mat.A = (double**)malloc(mat.n * sizeof(double*));
+		mat.A[0] = (double*)malloc(mat.n * mat.n * sizeof(double));
+		for (int i = 1; i < mat.n; i++) 
+		{
+			mat.A[i] = mat.A[0] + i * mat.n;
+		}
+		mat.C = (double*)malloc(mat.n * sizeof(double));
+		mat.X = NULL;
+	}
+
+	MPI_Bcast(mat.A[0], mat.n * mat.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(mat.C, mat.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+}
 
 void get_output_filename(const char* input_file, char* output_filename, long size)
 {
@@ -124,54 +169,64 @@ void get_output_filename(const char* input_file, char* output_filename, long siz
 	snprintf(output_filename, size, "mSolutions/msolution%s.txt", name_only);
 }
 
-void random_fill(double** matrix, int32_t size)
-{
-	for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++)
-		{
-			matrix[i][j] = ((rand() % 10) + 1);
-		}
-	}
-
-	//Ensure the matrix is diagonal dominant to guarantee invertible-ness
-	//diagCount well help keep track of which column the diagonal is in
-	int diagCount = 0;
-	double sum = 0;
-	for (int i = 0; i < size; i++)
-	{
-		for (int j = 0; j < size; j++)
-		{
-			//Sum all column vaalues
-			sum += abs(matrix[i][j]);
-		}
-		//Remove the diagonal  value from the sum
-		sum -= abs(matrix[i][diagCount]);
-		//Add a random value to the sum and place in diagonal position
-		matrix[i][diagCount] = sum + ((rand() % 5) + 1);
-		++diagCount;
-		sum = 0;
-	}
-}
-
 int main(int argc, char* argv[])
 {
-	const char* filename = getenv("INPUT_MATRIX_FILE");
+	/*const char* filename = getenv("INPUT_MATRIX_FILE");
 	if (!filename)
 	{
 		fprintf(stderr, "Error: environment variable INPUT_MATRIX_FILE not set.\n");
 		return 1;
-	}
+	}*/
+
+	MPI_Init(&argc, &argv);
+	int32_t rank, size;
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+	/*if (argc < 2 && rank == 0) 
+	{
+		std::cerr << "Usage: " << argv[0] << " <matrixFile>\n";
+		MPI_Abort(MPI_COMM_WORLD, 1);
+	}*/
 
 	Matrix matrix;
-	matrix = read_matrix_mpi(filename);
-	//matrix = read_matrix_mpi("testData/matrix2000.txt");
+	if (rank == 0) 
+	{
+		//matrix = read_matrix_mpi(filename);
+		matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
+	}
 
-	double start = omp_get_wtime();
-	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
-	band_matrix_omp::solve_lu(decomp, &matrix);
-	double end = omp_get_wtime();
-	printf("Elapsed time: %f seconds\n", end - start);
+	MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&matrix.b, 1, MPI_INT, 0, MPI_COMM_WORLD);
+
+	if (rank != 0) 
+	{
+		matrix.A = (double**)malloc(matrix.n * sizeof(double*));
+		matrix.A[0] = (double*)malloc(matrix.n * matrix.n * sizeof(double));
+		for (int i = 1; i < matrix.n; i++) 
+		{
+			matrix.A[i] = matrix.A[0] + i * matrix.n;
+		}
+		matrix.C = (double*)malloc(matrix.n * sizeof(double));
+	}
+
+	MPI_Bcast(matrix.A[0], matrix.n * matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	MPI_Bcast(matrix.C, matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+	double t1 = MPI_Wtime();
+	DecomposeMatrix decomp = band_matrix_mpi::lu_decomposition(matrix, rank, size);
+	band_matrix_mpi::solve_lu(decomp, &matrix, rank, size);
+	double t2 = MPI_Wtime();
+	if (rank == 0) 
+	{
+		printf("Elapsed time (MPI_Wtime): %f sec\n", t2 - t1);
+		//print_1d(matrix.X, matrix.n);
+	}
+
+	MPI_Finalize();
+
+	/*double end = omp_get_wtime();
+	printf("Elapsed time: %f seconds\n", end - start);*/
 
 	//print_1d(matrix.X, matrix.n);
 
@@ -267,6 +322,8 @@ int main(int argc, char* argv[])
 		free(matrix.X);
 	
 		MPI_Finalize();*/
+
+		
 		return 0;
 
 }

@@ -30,7 +30,6 @@ namespace band_matrix_omp
         result.l = (double**)malloc(n * sizeof(double*));
         result.u = (double**)malloc(n * sizeof(double*));
 
-        // Параллельное выделение памяти
         #pragma omp parallel for schedule(static)
         for (int32_t i = 0; i < n; i++)
         {
@@ -38,7 +37,6 @@ namespace band_matrix_omp
             result.u[i] = (double*)malloc(n * sizeof(double));
         }
 
-        // Копирование матрицы в U
         #pragma omp parallel for schedule(static)
         for (int32_t i = 0; i < n; i++)
         {
@@ -71,7 +69,6 @@ namespace band_matrix_omp
         int32_t n = matrix->n;
         double* y = (double*)malloc(n * sizeof(double));
 
-        // Решение Ly = b
         for (int32_t i = 0; i < n; i++)
         {
             double s = 0.0;
@@ -84,7 +81,7 @@ namespace band_matrix_omp
         }
 
         matrix->X = (double*)malloc(n * sizeof(double));
-        // Решение Ux = y
+
         for (int32_t i = n - 1, k = 0; i >= 0; --i, k++)
         {
             double s = 0.0;
