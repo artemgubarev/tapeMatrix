@@ -178,10 +178,19 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	MPI_Init(&argc, &argv);
+	Matrix matrix;
+	matrix = read_matrix(filename);
+
+	double start_time = omp_get_wtime();
+	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
+	band_matrix_omp::solve_lu(decomp, &matrix);
+	double end_time = omp_get_wtime();
+	printf("Time: %d sec.\n", end_time - start_time);
+
+	/*MPI_Init(&argc, &argv);
 	int32_t rank, size;
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	MPI_Comm_size(MPI_COMM_WORLD, &size);
+	MPI_Comm_size(MPI_COMM_WORLD, &size);*/
 
 	/*if (argc < 2 && rank == 0) 
 	{
@@ -189,42 +198,42 @@ int main(int argc, char* argv[])
 		MPI_Abort(MPI_COMM_WORLD, 1);
 	}*/
 
-	Matrix matrix;
-	if (rank == 0) 
-	{
-		matrix = read_matrix_mpi(filename,rank);
-		//matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
-	}
+	//Matrix matrix;
+	//if (rank == 0) 
+	//{
+	//	matrix = read_matrix_mpi(filename,rank);
+	//	//matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
+	//}
 
-	MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-	MPI_Bcast(&matrix.b, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	//MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+	//MPI_Bcast(&matrix.b, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-	if (rank != 0) 
-	{
-		matrix.A = (double**)malloc(matrix.n * sizeof(double*));
-		matrix.A[0] = (double*)malloc(matrix.n * matrix.n * sizeof(double));
-		for (int i = 1; i < matrix.n; i++) 
-		{
-			matrix.A[i] = matrix.A[0] + i * matrix.n;
-		}
-		matrix.C = (double*)malloc(matrix.n * sizeof(double));
-	}
+	//if (rank != 0) 
+	//{
+	//	matrix.A = (double**)malloc(matrix.n * sizeof(double*));
+	//	matrix.A[0] = (double*)malloc(matrix.n * matrix.n * sizeof(double));
+	//	for (int i = 1; i < matrix.n; i++) 
+	//	{
+	//		matrix.A[i] = matrix.A[0] + i * matrix.n;
+	//	}
+	//	matrix.C = (double*)malloc(matrix.n * sizeof(double));
+	//}
 
-	MPI_Bcast(matrix.A[0], matrix.n * matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Bcast(matrix.C, matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	//MPI_Bcast(matrix.A[0], matrix.n * matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+	//MPI_Bcast(matrix.C, matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-	double t1 = MPI_Wtime();
-	DecomposeMatrix decomp = band_matrix_mpi::lu_decomposition(matrix, rank, size);
-	band_matrix_mpi::solve_lu(decomp, &matrix, rank, size);
-	double t2 = MPI_Wtime();
-	if (rank == 0) 
-	{
-		printf("Elapsed time (MPI_Wtime): %f sec\n", t2 - t1);
-		write_1d("solution.txt", matrix.X, matrix.n);
-		//print_1d(matrix.X, matrix.n);
-	}
+	//double t1 = MPI_Wtime();
+	//DecomposeMatrix decomp = band_matrix_mpi::lu_decomposition(matrix, rank, size);
+	//band_matrix_mpi::solve_lu(decomp, &matrix, rank, size);
+	//double t2 = MPI_Wtime();
+	//if (rank == 0) 
+	//{
+	//	printf("Elapsed time (MPI_Wtime): %f sec\n", t2 - t1);
+	//	write_1d("solution.txt", matrix.X, matrix.n);
+	//	//print_1d(matrix.X, matrix.n);
+	//}
 
-	MPI_Finalize();
+	//MPI_Finalize();
 
 	/*double end = omp_get_wtime();
 	printf("Elapsed time: %f seconds\n", end - start);*/
