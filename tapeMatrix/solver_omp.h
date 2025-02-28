@@ -7,7 +7,7 @@
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
-namespace band_matrix_omp
+namespace tape_matrix_omp
 {
     void reverse_array(double* array, int32_t n)
     {

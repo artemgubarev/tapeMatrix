@@ -5,7 +5,7 @@
 #include <utility>
 #include "matrix.h"
 
-namespace band_matrix_serial
+namespace tape_matrix_serial
 {
     struct DecomposeMatrix lu_decomposition(struct Matrix matrix)
     {
