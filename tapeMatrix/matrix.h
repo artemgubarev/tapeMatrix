@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 struct DecomposeMatrix
 {
@@ -14,6 +15,27 @@ struct Matrix
     double** A;
     double* X;
 };
+
+double** allocate_matrix(uint32_t n)
+{
+	double** matrix = (double**)malloc(n * sizeof(double*));
+	if (!matrix)
+	{
+		perror("Error allocating matrix pointers");
+		exit(EXIT_FAILURE);
+	}
+	matrix[0] = (double*)malloc(n * n * sizeof(double));
+	if (!matrix[0])
+	{
+		perror("Error allocating matrix memory");
+		exit(EXIT_FAILURE);
+	}
+	for (size_t i = 1; i < n; i++)
+	{
+		matrix[i] = matrix[0] + i * n;
+	}
+	return matrix;
+}
 
 Matrix read_matrix(const char* filename)
 {
@@ -61,25 +83,4 @@ Matrix read_matrix(const char* filename)
 
 	fclose(file);
 	return mat;
-}
-
-double** allocate_matrix(uint32_t n)
-{
-	double** matrix = (double**)malloc(n * sizeof(double*));
-	if (!matrix)
-	{
-		perror("Error allocating matrix pointers");
-		exit(EXIT_FAILURE);
-	}
-	matrix[0] = (double*)malloc(n * n * sizeof(double));
-	if (!matrix[0])
-	{
-		perror("Error allocating matrix memory");
-		exit(EXIT_FAILURE);
-	}
-	for (size_t i = 1; i < n; i++)
-	{
-		matrix[i] = matrix[0] + i * n;
-	}
-	return matrix;
 }

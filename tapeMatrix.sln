@@ -7,30 +7,48 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tapeMatrix", "tapeMatrix\ta
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tapeMatrixDemo", "tapeMatrixDemo\tapeMatrixDemo.vcxproj", "{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}"
 EndProject
+Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "tapeMatrixPy", "tapeMatrixPy\tapeMatrixPy.pyproj", "{8B744A7C-3117-47D9-B832-EC69722981D9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Debug|Any CPU.Build.0 = Debug|x64
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Debug|x64.ActiveCfg = Debug|x64
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Debug|x64.Build.0 = Debug|x64
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Debug|x86.ActiveCfg = Debug|Win32
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Debug|x86.Build.0 = Debug|Win32
+		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Release|Any CPU.ActiveCfg = Release|x64
+		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Release|Any CPU.Build.0 = Release|x64
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Release|x64.ActiveCfg = Release|x64
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Release|x64.Build.0 = Release|x64
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Release|x86.ActiveCfg = Release|Win32
 		{9C135811-4229-47FD-9D4B-37C47E8E8E20}.Release|x86.Build.0 = Release|Win32
+		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Debug|Any CPU.Build.0 = Debug|x64
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Debug|x64.ActiveCfg = Debug|x64
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Debug|x64.Build.0 = Debug|x64
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Debug|x86.ActiveCfg = Debug|Win32
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Debug|x86.Build.0 = Debug|Win32
+		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Release|Any CPU.ActiveCfg = Release|x64
+		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Release|Any CPU.Build.0 = Release|x64
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Release|x64.ActiveCfg = Release|x64
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Release|x64.Build.0 = Release|x64
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Release|x86.ActiveCfg = Release|Win32
 		{05C4CAC3-9031-40C5-8A04-6D22E9CABB8B}.Release|x86.Build.0 = Release|Win32
+		{8B744A7C-3117-47D9-B832-EC69722981D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B744A7C-3117-47D9-B832-EC69722981D9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{8B744A7C-3117-47D9-B832-EC69722981D9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8B744A7C-3117-47D9-B832-EC69722981D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B744A7C-3117-47D9-B832-EC69722981D9}.Release|x64.ActiveCfg = Release|Any CPU
+		{8B744A7C-3117-47D9-B832-EC69722981D9}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
