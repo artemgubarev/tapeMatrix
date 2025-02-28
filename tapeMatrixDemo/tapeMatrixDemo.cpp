@@ -107,88 +107,78 @@ int main(int argc, char* argv[])
         matrix = read_matrix(filename);
     }
 
-    switch (mode) 
-    {
-    case 0:  // serial
-        start_time = (double)clock() / CLOCKS_PER_SEC;
-        DecomposeMatrix decomp_serial = tape_matrix_serial::lu_decomposition(matrix);
-        tape_matrix_serial::solve_lu(decomp_serial, &matrix);
-        end_time = (double)clock() / CLOCKS_PER_SEC;
-        break;
+	if (mode == 0)// serial
+	{
+		start_time = (double)clock() / CLOCKS_PER_SEC;
+		DecomposeMatrix decomp_serial = tape_matrix_serial::lu_decomposition(matrix);
+		tape_matrix_serial::solve_lu(decomp_serial, &matrix);
+		end_time = (double)clock() / CLOCKS_PER_SEC;
+	}
+	else if (mode == 1) // pthreads
+	{
+		start_time = get_time();
+		DecomposeMatrix decomp_pthreads = tape_matrix_pthreads::lu_decomposition(matrix, num_threads);
+		tape_matrix_pthreads::solve_lu(decomp_pthreads, &matrix, num_threads);
+		end_time = get_time();
+	}
+	else if (mode == 2) // openmp
+	{
+		start_time = omp_get_wtime();
+		DecomposeMatrix decomp_omp = tape_matrix_omp::lu_decomposition(matrix);
+		tape_matrix_omp::solve_lu(decomp_omp, &matrix);
+		end_time = omp_get_wtime();
+	}
+	else if (mode == 3) // MPI
+	{
+		int32_t rank, size;
+		MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+		MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    case 1:  // pthreads
-        start_time = get_time();
-        DecomposeMatrix decomp_pthreads = tape_matrix_pthreads::lu_decomposition(matrix, num_threads);
-        tape_matrix_pthreads::solve_lu(decomp_pthreads, &matrix, num_threads);
-        end_time = get_time();
-        break;
+		if (rank == 0) {
+			matrix = tape_matrix_mpi::read_matrix(filename, rank);
+		}
 
-    case 2:  // openmp
-        start_time = omp_get_wtime();
-        DecomposeMatrix decomp_omp = tape_matrix_omp::lu_decomposition(matrix);
-        tape_matrix_omp::solve_lu(decomp_omp, &matrix);
-        end_time = omp_get_wtime();
-        break;
+		MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&matrix.b, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
-    case 3:  // MPI
-        int32_t rank, size;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &size);
+		if (rank != 0)
+		{
+			matrix.A = (double**)malloc(matrix.n * sizeof(double*));
+			matrix.A[0] = (double*)malloc(matrix.n * matrix.n * sizeof(double));
+			for (int i = 1; i < matrix.n; i++)
+			{
+				matrix.A[i] = matrix.A[0] + i * matrix.n;
+			}
+			matrix.C = (double*)malloc(matrix.n * sizeof(double));
+		}
 
-        if (rank == 0) {
-            matrix = tape_matrix_mpi::read_matrix(filename, rank);
-        }
+		MPI_Bcast(matrix.A[0], matrix.n * matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		MPI_Bcast(matrix.C, matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
-        MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&matrix.b, 1, MPI_INT, 0, MPI_COMM_WORLD);
+		start_time = MPI_Wtime();
+		DecomposeMatrix decomp_mpi = tape_matrix_mpi::lu_decomposition(matrix, rank, size);
+		tape_matrix_mpi::solve_lu(decomp_mpi, &matrix, rank, size);
+		end_time = MPI_Wtime();
 
-        if (rank != 0) 
-        {
-            matrix.A = (double**)malloc(matrix.n * sizeof(double*));
-            matrix.A[0] = (double*)malloc(matrix.n * matrix.n * sizeof(double));
-            for (int i = 1; i < matrix.n; i++) 
-            {
-                matrix.A[i] = matrix.A[0] + i * matrix.n;
-            }
-            matrix.C = (double*)malloc(matrix.n * sizeof(double));
-        }
-
-        MPI_Bcast(matrix.A[0], matrix.n * matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        MPI_Bcast(matrix.C, matrix.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-        start_time = MPI_Wtime();
-        DecomposeMatrix decomp_mpi = tape_matrix_mpi::lu_decomposition(matrix, rank, size);
-        tape_matrix_mpi::solve_lu(decomp_mpi, &matrix, rank, size);
-        end_time = MPI_Wtime();
-
-        if (rank == 0) 
-        {
-            printf("MPI time: %.6f sec\n", end_time - start_time);
-            write_1d("solution.txt", matrix.X, matrix.n);
-        }
-        break;
-
-    default:
-        printf("Incorrect mode value\n");
-        if (mode == 3) MPI_Finalize();
-        return 1;
-    }
+		if (rank == 0)
+		{
+			printf("MPI time: %.6f sec\n", end_time - start_time);
+			write_1d("solution.txt", matrix.X, matrix.n);
+		}
+		MPI_Finalize();
+	}
+	else
+	{
+		printf("Incorrect mode value\n");
+		if (mode == 3) MPI_Finalize();
+		return 1;
+	}
 
     if (mode != 3)
     {
+		printf("Time spent: %.6f seconds\n", end_time - start_time);
         write_1d("solution.txt", matrix.X, matrix.n);
     }
-
-    if (mode == 3) 
-    {
-        MPI_Finalize();
-    }
-
-    if (mode != 3) 
-    {
-        printf("Time spent: %.6f seconds\n", end_time - start_time);
-    }
-
 
 #pragma endregion
 
