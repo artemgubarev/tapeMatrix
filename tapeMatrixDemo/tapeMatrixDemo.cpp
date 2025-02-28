@@ -1,3 +1,5 @@
+#define HAVE_STRUCT_TIMESPEC
+#define _NO_DEBUG_HEAP 1
 
 #include <iostream>
 #include <cstdlib>
@@ -8,14 +10,22 @@
 #include <ctime>
 #include <mpi.h>
 #include <omp.h>
+#include <time.h>
+#include <pthread.h>
 #include "comparator.h"
 #include "../tapeMatrix/matrix.h"
 #include "../tapeMatrix/printer.h"
 #include "../tapeMatrix/writer.h"
 #include "../tapeMatrix/solver_serial.h"
 #include "../tapeMatrix/solver_omp.h"
-#include "../tapeMatrix/solver_mpi_omp.h"
 #include "../tapeMatrix/solver_mpi.h"
+#include "../tapeMatrix/solver_pthreads.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
 
 double** allocate_matrix_mpi(uint32_t n)
 {
@@ -123,24 +133,6 @@ Matrix read_matrix_mpi(const char* filename, int rank)
 	return mat;
 }
 
-void distribute_matrix(Matrix& mat, int rank, int size)
-{
-	if (rank != 0) 
-	{
-		mat.A = (double**)malloc(mat.n * sizeof(double*));
-		mat.A[0] = (double*)malloc(mat.n * mat.n * sizeof(double));
-		for (int i = 1; i < mat.n; i++) 
-		{
-			mat.A[i] = mat.A[0] + i * mat.n;
-		}
-		mat.C = (double*)malloc(mat.n * sizeof(double));
-		mat.X = NULL;
-	}
-
-	MPI_Bcast(mat.A[0], mat.n * mat.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-	MPI_Bcast(mat.C, mat.n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-}
-
 void get_output_filename(const char* input_file, char* output_filename, long size)
 {
 	const char* filename = strrchr(input_file, '/');
@@ -169,6 +161,20 @@ void get_output_filename(const char* input_file, char* output_filename, long siz
 	snprintf(output_filename, size, "mSolutions/msolution%s.txt", name_only);
 }
 
+double get_time() 
+{
+#ifdef _WIN32
+	LARGE_INTEGER frequency, start;
+	QueryPerformanceFrequency(&frequency);
+	QueryPerformanceCounter(&start);
+	return (double)start.QuadPart / frequency.QuadPart;
+#else
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return t.tv_sec + t.tv_nsec * 1e-9;
+#endif
+}
+
 int main(int argc, char* argv[])
 {
 	const char* filename = getenv("INPUT_MATRIX_FILE");
@@ -178,14 +184,31 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	const char* num_threads_str = getenv("SLURM_CPUS_PER_TASK");
+	if (!num_threads_str) {
+		fprintf(stderr, "Error: environment variable SLURM_CPUS_PER_TASK not set.\n");
+		return 1;
+	}
+
+	int32_t num_threads = atoi(num_threads_str);
+	if (num_threads <= 0) {
+		fprintf(stderr, "Error: invalid number of threads.\n");
+		return 1;
+	}
+
 	Matrix matrix;
 	matrix = read_matrix(filename);
+	//matrix = read_matrix("testData/matrix2000.txt");
 
-	double start_time = omp_get_wtime();
-	DecomposeMatrix decomp = band_matrix_omp::lu_decomposition(matrix);
-	band_matrix_omp::solve_lu(decomp, &matrix);
-	double end_time = omp_get_wtime();
-	printf("Time: %d sec.\n", end_time - start_time);
+	double start_time = get_time();
+
+	int32_t num_threads = 1;
+	DecomposeMatrix decomp = band_matrix_pthreads::lu_decomposition(matrix, num_threads);
+	band_matrix_pthreads::solve_lu(decomp, &matrix, num_threads);
+
+	double end_time = get_time();
+	printf("Time: %.6f sec.\n", end_time - start_time);
+	print_1d(matrix.X, matrix.n);
 
 	/*MPI_Init(&argc, &argv);
 	int32_t rank, size;
@@ -201,8 +224,8 @@ int main(int argc, char* argv[])
 	//Matrix matrix;
 	//if (rank == 0) 
 	//{
-	//	matrix = read_matrix_mpi(filename,rank);
-	//	//matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
+	//	//matrix = read_matrix_mpi(filename,rank);
+	//	matrix = read_matrix_mpi("testData/matrix2000.txt", rank);
 	//}
 
 	//MPI_Bcast(&matrix.n, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -229,7 +252,7 @@ int main(int argc, char* argv[])
 	//if (rank == 0) 
 	//{
 	//	printf("Elapsed time (MPI_Wtime): %f sec\n", t2 - t1);
-	//	write_1d("solution.txt", matrix.X, matrix.n);
+	//	//write_1d("solution.txt", matrix.X, matrix.n);
 	//	//print_1d(matrix.X, matrix.n);
 	//}
 
@@ -306,7 +329,7 @@ int main(int argc, char* argv[])
 		//}
 	
 	#pragma region compare
-		double epsilon = 0.00001;
+		/*double epsilon = 0.00001;
 		double* numbers1 = new double[MAX_NUMBERS];
 		double* numbers2 = new double[MAX_NUMBERS];
 		size_t count1, count2;
@@ -323,7 +346,7 @@ int main(int argc, char* argv[])
 			printf("\033[31mTest Failed\033[0m\n");
 		}
 		delete[] numbers1;
-		delete[] numbers2;
+		delete[] numbers2;*/
 	#pragma endregion
 	
 		/*free(matrix.A[0]);
