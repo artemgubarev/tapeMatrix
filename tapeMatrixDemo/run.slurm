@@ -19,18 +19,12 @@ export SLURM_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
 # 4 - python MPI
 export MODE=1
 
-if [ "$MODE" -eq 0 ]; then
-    g++ -std=c++11 -o tapeMatrix tapeMatrixDemo.cpp
-    srun ./tapeMatrix
-elif [ "$MODE" -eq 1 ]; then
-    g++ -std=c++11 -pthread -o tapeMatrix tapeMatrixDemo.cpp
-    srun ./tapeMatrix
-elif [ "$MODE" -eq 2 ]; then
-    g++ -std=c++11 -fopenmp -o tapeMatrix tapeMatrixDemo.cpp
-    srun ./tapeMatrix
-elif [ "$MODE" -eq 3 ]; then
-    mpicxx -std=c++11 -o tapeMatrix tapeMatrixDemo.cpp
+mpicxx -std=c++11 -fopenmp -pthread -o tapeMatrix tapeMatrixDemo.cpp
+
+if [ "$MODE" -eq 3 ]; then
     mpirun -n $SLURM_NTASKS ./tapeMatrix
+elif [ "$MODE" -eq 0 ] || [ "$MODE" -eq 1 ] || [ "$MODE" -eq 2 ]; then
+    srun ./tapeMatrix
 else
     echo "Error: Unknown MODE value. Supported values are 0, 1, 2, 3, 4."
     exit 1

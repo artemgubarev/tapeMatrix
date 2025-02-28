@@ -13,6 +13,7 @@
 #include <time.h>
 #include <pthread.h>
 #include "comparator.h"
+
 #include "../tapeMatrix/matrix.h"
 #include "../tapeMatrix/printer.h"
 #include "../tapeMatrix/writer.h"
