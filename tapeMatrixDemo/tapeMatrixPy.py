@@ -1,9 +1,8 @@
 from mpi4py import MPI
 import time
 import sys
-
+import os
 sys.path.append("../tapeMatrix")
-
 import matrix as mtrx
 import solver_mpi as solver
 
@@ -16,7 +15,8 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 
-filename = '../tapeMatrixDemo/testData/matrix2000.txt'
+filename = os.environ['INPUT_MATRIX_FILE']
+#filename = 'testData/matrix2000.txt'
 matrix = mtrx.read_matrix(filename, rank)
 
 if rank == 0:

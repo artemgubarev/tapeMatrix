@@ -18,7 +18,6 @@ def read_matrix(filename, rank):
     comm = MPI.COMM_WORLD
     try:
         with open(filename, "r") as file:
-            # Read n and b from separate lines
             try:
                 n = int(file.readline().strip())
                 b = int(file.readline().strip())
@@ -33,8 +32,7 @@ def read_matrix(filename, rank):
 
             A = np.zeros((n, n))
             C = np.zeros(n)
-
-            # Read matrix A
+            
             for i in range(n):
                 try:
                     line = file.readline().strip()
@@ -52,8 +50,7 @@ def read_matrix(filename, rank):
                     if rank == 0:
                         print(f"Error reading row {i+1} from '{filename}': {e}")
                     comm.Abort(1)
-
-            # Read vector C
+                    
             try:
                 line = file.readline().strip()
                 C[:] = list(map(float, line.split()))
