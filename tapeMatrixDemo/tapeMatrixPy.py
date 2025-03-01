@@ -6,10 +6,7 @@ sys.path.append("../tapeMatrix")
 import matrix as mtrx
 import solver_mpi as solver
 import comparator as comp
-
-def write_sol(sol):
-     with open('solution.txt', 'w') as f:
-        f.write(' '.join(["%.6f" % x for x in sol]))
+import numpy as np
 
 def get_output_filename(input_filename, suffix="_output"):
     base, ext = os.path.splitext(input_filename)
@@ -49,7 +46,7 @@ solver.solve_lu(decompose_matrix, matrix, rank, size)
 if rank == 0:
     end_time = time.time()
     elapsed_time = end_time - start_time
-    write_sol(matrix.X)
+    np.savetxt("output.txt", matrix.X, fmt='%.6f', delimiter=' ')
     #print(f"Solution X: {matrix.X}")
     print(f"Elapsed time: {elapsed_time:.6f} seconds")
     test_compare_files(filename)
