@@ -5,11 +5,6 @@ import os
 sys.path.append("../tapeMatrix")
 import matrix as mtrx
 import solver_mpi as solver
-import comparator as comp
-
-def get_output_filename(input_filename):
-    base, ext = os.path.splitext(input_filename)
-    return f"{base}{ext}"
 
 def write_sol(filename, numbers, precision=5):
     with open(filename, 'w') as file:
@@ -35,4 +30,3 @@ if rank == 0:
     elapsed_time = end_time - start_time
     print(elapsed_time)
     write_sol("solution.txt", matrix.X)
-    comp.compare_numbers("solution.txt", get_output_filename(filename))
