@@ -5,11 +5,29 @@ import os
 sys.path.append("../tapeMatrix")
 import matrix as mtrx
 import solver_mpi as solver
+import comparator as comp
 
 def write_sol(sol):
      with open('solution.txt', 'w') as f:
         formatted_values = [f"{x:.6f}" for x in sol]
         f.write(' '.join(formatted_values))
+
+def test_compare_files(filename, solution_filename="solution.txt", epsilon=1e-5):
+    numbers1, count1 = comp.load_numbers(solution_filename)
+    if numbers1 is None:
+        return 1
+    
+    output_filename = comp.get_output_filename(filename)
+    numbers2, count2 = comp.load_numbers(output_filename)
+    if numbers2 is None:
+        return 1
+
+    if comp.compare_numbers(numbers1, numbers2, count1, count2, epsilon):
+        print("\033[32mTest Correct\033[0m")
+        return 0
+    else:
+        print("\033[31mTest Failed\033[0m")
+        return 1
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -31,3 +49,4 @@ if rank == 0:
     write_sol(matrix.X)
     #print(f"Solution X: {matrix.X}")
     print(f"Elapsed time: {elapsed_time:.6f} seconds")
+    test_compare_files(filename)
