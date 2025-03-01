@@ -12,12 +12,16 @@ def write_sol(sol):
         formatted_values = [f"{x:.6f}" for x in sol]
         f.write(' '.join(formatted_values))
 
+def get_output_filename(input_filename, suffix="_output"):
+    base, ext = os.path.splitext(input_filename)
+    return f"{base}{suffix}{ext}"
+
 def test_compare_files(filename, solution_filename="solution.txt", epsilon=1e-5):
     numbers1, count1 = comp.load_numbers(solution_filename)
     if numbers1 is None:
         return 1
     
-    output_filename = comp.get_output_filename(filename)
+    output_filename = get_output_filename(filename)
     numbers2, count2 = comp.load_numbers(output_filename)
     if numbers2 is None:
         return 1

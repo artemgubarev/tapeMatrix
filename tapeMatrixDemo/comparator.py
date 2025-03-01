@@ -25,7 +25,6 @@ def load_numbers(filename):
         print(f"An unexpected error occurred: {e}")
         return None, 0
 
-
 def compare_numbers(vec1, vec2, count1, count2, epsilon=1e-5):
     if count1 != count2:
         print("Error: Files contain different number of values!")
