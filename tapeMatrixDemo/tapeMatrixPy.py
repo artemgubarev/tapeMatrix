@@ -6,12 +6,15 @@ sys.path.append("../tapeMatrix")
 import matrix as mtrx
 import solver_mpi as solver
 import comparator as comp
-import numpy as np
-import colorama
 
 def get_output_filename(input_filename):
     base, ext = os.path.splitext(input_filename)
     return f"{base}{ext}"
+
+def write_sol(filename, numbers, precision=5):
+    with open(filename, 'w') as file:
+        formatted_numbers = [f"{num:.{precision}f}" for num in numbers]
+        file.write(" ".join(formatted_numbers))
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -30,5 +33,6 @@ solver.solve_lu(decompose_matrix, matrix, rank, size)
 if rank == 0:
     end_time = time.time()
     elapsed_time = end_time - start_time
-    #np.savetxt("solution.txt", [matrix.X], fmt='%.6f', delimiter=' ')
     print(elapsed_time)
+    write_sol("solution.txt", matrix.X)
+    comp.compare_numbers("solution.txt", get_output_filename(filename))
