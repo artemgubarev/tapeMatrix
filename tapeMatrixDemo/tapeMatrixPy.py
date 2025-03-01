@@ -9,8 +9,7 @@ import comparator as comp
 
 def write_sol(sol):
      with open('solution.txt', 'w') as f:
-        formatted_values = [f"{x:.6f}" for x in sol]
-        f.write(' '.join(formatted_values))
+        f.write(' '.join(["%.6f" % x for x in sol]))
 
 def get_output_filename(input_filename, suffix="_output"):
     base, ext = os.path.splitext(input_filename)
