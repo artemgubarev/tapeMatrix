@@ -11,6 +11,7 @@ module load mpi/impi/2019.4.243
 
 export INPUT_MATRIX_FILE="testData/matrix100.txt"
 export SLURM_CPUS_PER_TASK=$SLURM_CPUS_PER_TASK
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
 
 # 0 - serial
 # 1 - pthreads
